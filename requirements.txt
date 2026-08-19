@@ -1,0 +1,6 @@
+# 用于记录 CA6000 项目运行所需的 Python 第三方依赖。
+
+pandas==3.0.3
+numpy==2.5.1
+matplotlib==3.11.1
+scikit-learn==1.9.0
