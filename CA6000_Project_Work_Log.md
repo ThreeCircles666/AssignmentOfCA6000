@@ -24,6 +24,9 @@ project state, confirmed findings, analytical decisions, and
 implementation rules. Future development should always refer to this
 document before making changes.
 
+A more detailed Chinese log, including every EDA method, figure choice,
+and plotting parameter, is in `CA6000_项目开发者日志.md`.
+
 ### 0.2 Notebook development format
 
 Each analytical step in the notebook should follow this structure:
@@ -284,469 +287,342 @@ Outputs:
 
 # 3. Conclusions from 03_eda.ipynb
 
-## 3.1 EDA Objective and Analysis Scope
+Status: exploratory analysis is complete.
 
-The exploratory data analysis stage investigates the statistical characteristics, temporal patterns, operational factors, store characteristics, and external competition factors related to Rossmann daily sales.
+A more detailed Chinese developer log, including every analysis method,
+figure choice, and plotting parameter, is maintained separately in:
 
-The objectives of this stage are:
+    CA6000_项目开发者日志.md
 
-1. Understand the distribution characteristics of Sales and Customers;
-2. Identify important temporal patterns;
-3. Explore relationships between sales and operational variables;
-4. Evaluate the predictive value of store-level and external features;
-5. Provide evidence for feature engineering and neural network modelling.
+The EDA notebook has 34 cells. It covers descriptive statistics, one
+histogram, one time-series plot, one scatter relationship, grouped
+boxplots, categorical bar charts, competition analysis, and a
+promotion-versus-traffic comparison. Fifteen figures were saved under
+`outputs/figures/`.
 
-All analyses focus on identifying statistical associations and predictive signals rather than establishing causal relationships.
+The notebook does not yet contain the required end-of-notebook summary
+section specified in Section 0.2. That documentation gap is covered by
+this work log and the Chinese log.
 
----
+## 3.1 Completed: EDA environment preparation
 
-# 3.2 Data Overview and Operating-Day Selection
+Completed:
 
-The cleaned training dataset contains:
+-   Load `data/processed/train_clean.csv` and `store_clean.csv`.
+-   Restore `Date`, `StateHoliday`, nullable competition fields, and
+    Promo2 fields.
+-   Create `outputs/figures/`.
+-   Establish the shared SCI-style Matplotlib configuration.
 
-- 1,017,209 daily store observations.
+Confirmed setup:
 
-According to the `Open` variable:
+-   1,017,209 train rows, 9 columns.
+-   1,115 store rows, 10 columns.
+-   `Date` dtype: `datetime64[us]`.
+-   `StateHoliday` dtype: `string`.
 
-| Condition | Number of observations |
-|---|---:|
-| Open = 1 | 844,392 |
-| Open = 0 | 172,817 |
+Later EDA cells often reload the CSV independently instead of reusing
+the setup DataFrame. Some reloads omit `dtype`, which raises a
+`StateHoliday` mixed-type warning. This does not change the completed
+analysis, but feature engineering should load data once with explicit
+dtypes.
 
-Closed stores naturally generate:
+## 3.2 Completed: Descriptive statistics
 
-\[
-Sales=0
-\]
+Analysed:
 
-and
+-   Sales
+-   Customers
 
-\[
-Customers=0
-\]
+Two scopes were considered:
 
-These observations represent structural zeros rather than normal operating conditions.
-
-Therefore, operating-day observations:
-
-\[
-Open=1
-\]
-
-are mainly used for sales performance analysis.
-
----
-
-# 3.3 Sales and Customer Distribution Analysis
-
-## Sales Distribution
-
-For operating days:
-
-Mean daily sales:
-
-\[
-Mean(Sales)=6955.51
-\]
-
-Median daily sales:
-
-\[
-Median(Sales)=6369
-\]
-
-
-The mean value is higher than the median value, indicating that daily sales follow a positively skewed distribution.
-
-High-sales observations exist in the dataset. However, these observations are not automatically removed because they may represent:
-
-- high-performing stores;
-- peak demand periods;
-- genuine business variation.
-
----
-
-## Sales Outlier Analysis
-
-The interquartile range method was used to identify potential extreme sales observations.
-
-For operating-day Sales:
-
-\[
-Q1=4859
-\]
-
-\[
-Q3=8360
-\]
-
-\[
-IQR=3501
-\]
-
-
-The upper statistical boundary is:
-
-\[
-Q3+1.5\times IQR=13611.5
-\]
-
-
-Some observations exceed this threshold.
-
-However, extreme sales values are retained because they may contain valuable business information.
-
-Conclusion:
-
-> Statistical outliers should be investigated but should not be automatically removed.
-
----
-
-## Customer Distribution
-
-Customer traffic also shows a positively skewed distribution.
-
-For operating days:
-
-Mean Customers:
-
-\[
-Mean(Customers)=762.73
-\]
-
-
-Median Customers:
-
-\[
-Median(Customers)=676
-\]
-
-
-Customer volume varies substantially among different stores and dates.
-
----
-
-# 3.4 Temporal Pattern Analysis
-
-## Daily Sales Trend
-
-Daily average sales were analysed using operating stores only.
-
-The daily average sales metric was defined as:
-
-$$
-\bar{S_t}
-=
-\frac{\sum_{i=1}^{n_t}Sales_{i,t}}
-{n_t}
-$$
-
-where:
-
-- \(t\) represents date;
-- \(n_t\) represents the number of operating stores on date \(t\).
-
-This removes the influence caused by different numbers of open stores on different dates.
-
-The analysis identified clear temporal variation in daily sales.
-
-Therefore, date-related information is expected to provide useful predictive signals.
-
----
-
-## Weekly Seasonality
-
-Sales performance varies across different weekdays.
-
-The analysis indicates that weekday information contains predictive value.
-
-Potential temporal features for later modelling include:
-
-- Year;
-- Month;
-- Week;
-- DayOfWeek.
-
----
-
-# 3.5 Relationship Between Customers and Sales
-
-The relationship between customer traffic and sales was analysed.
-
-Pearson correlation coefficient:
-
-$$
-r=0.8236
-$$
-
-
-This indicates a strong positive relationship between Customers and Sales.
-
-Customer traffic is therefore one of the strongest predictors of daily sales.
-
-However, the scatter plot shows increasing variation when customer numbers become higher.
-
-This indicates:
-
-- Customers alone cannot fully explain sales variation;
-- Additional operational and store-level factors are required.
-
----
-
-# 3.6 Promotion Impact Analysis
-
-Sales performance under promotion and non-promotion conditions was compared.
-
-Results:
-
-| Promo | Mean Sales |
-|---|---:|
-| 0 | 5929.41 |
-| 1 | 8228.28 |
-
-The relative difference is:
-
-\[
-\frac{8228.28-5929.41}{5929.41}
-=
-38.8\%
-\]
-
-
-Promotion periods show substantially higher average sales.
-
-Further analysis shows that promotion is also associated with increased customer traffic.
-
-Therefore, promotion may influence sales through:
-
-\[
-Promo
-\rightarrow
-Customers
-\rightarrow
-Sales
-\]
-
-The `Promo` variable should be considered an important modelling feature.
-
----
-
-# 3.7 Holiday Impact Analysis
-
-## StateHoliday
-
-Different state holiday categories were analysed.
-
-The results show that holiday categories are associated with different sales performance levels.
-
-Therefore:
-
-
-StateHoliday
-
-
-contains useful predictive information.
-
----
-
-## SchoolHoliday
-
-Sales distributions were compared between:
-
-- SchoolHoliday = 0;
-- SchoolHoliday = 1.
-
-The results indicate differences between school holiday and non-school holiday periods.
-
-Therefore:
-
-
-SchoolHoliday
-
-
-should also be considered during feature engineering.
-
----
-
-# 3.8 Store Characteristics Analysis
-
-Store-level information was merged with daily sales records.
-
-## StoreType
-
-Different store types show different average sales performance.
-
-This indicates that store operation mode influences sales behaviour.
-
-Potential feature:
-
-
-StoreType
-
-
----
-
-## Assortment
-
-Different assortment categories show different sales performance.
-
-The analysis considered:
-
-1. Store distribution among assortment categories;
-2. Average sales performance among categories.
-
-This indicates that product assortment structure provides additional predictive information.
-
-Potential feature:
-
-
-Assortment
-
-
----
-
-# 3.9 Competition Analysis
-
-Competition distance was analysed as an external market factor.
-
-The variable:
-
-
-CompetitionDistance
-
-
-shows substantial variation among stores.
-
-The relationship between CompetitionDistance and Sales is not strongly linear.
-
-This suggests that competition effects may interact with:
-
-- store location;
-- market environment;
-- store characteristics.
-
-Therefore:
-
-
-CompetitionDistance
-
-
-should be retained as a potential feature rather than removed.
-
----
-
-# 3.10 Promotion and Customer Traffic Interaction
-
-The relationship between promotion and customer traffic was further investigated.
-
-The results indicate that promotion periods are associated with changes in customer numbers.
-
-This suggests that promotion may improve sales partly through increasing customer visits.
-
-Because average basket size is unavailable in the dataset, customer traffic provides an important intermediate indicator for understanding promotion effects.
-
----
-
-# 3.11 Feature Engineering Implications
-
-Based on all EDA results, the following variables should be considered in the feature engineering stage.
-
-## Temporal Features
-
-Potential features:
-
-- Year;
-- Month;
-- Week;
-- DayOfWeek.
+1.  All daily records.
+2.  Operating days (`Open = 1`).
 
 Reason:
 
-Sales show clear temporal variation and weekday differences.
+Closed stores create structural zeros.
 
----
+Important findings:
 
-## Customer and Promotion Features
+-   1,017,209 daily records.
+-   844,392 operating days (83.01%).
+-   172,817 closed-store days (16.99%).
 
-Potential features:
+Operating-day Sales:
 
-- Customers;
-- Promo.
+-   Mean: 6,955.51
+-   Median: 6,369.00
+-   Standard deviation: 3,104.21
+-   Q1: 4,859.00
+-   Q3: 8,360.00
+-   IQR: 3,501.00
+-   Maximum: 41,551.00
 
-Reason:
+Operating-day Customers:
 
-Customers show strong correlation with Sales, while Promo significantly increases average sales.
+-   Mean: 762.73
+-   Median: 676.00
+-   Standard deviation: 401.23
+-   IQR: 374
+-   Maximum: 7,388
 
----
+Both distributions are right-skewed. The mean-minus-median gap for
+operating-day Sales is 586.51. Calculation audits for mean, sample
+variance (`ddof=1`), standard deviation, and IQR all returned True.
 
-## Holiday Features
+## 3.3 Completed: Sales distribution and boxplot
 
-Potential features:
+Figures:
 
-- StateHoliday;
-- SchoolHoliday.
+-   `outputs/figures/sales_distribution_open.png`
+-   `outputs/figures/sales_boxplot_open.png`
 
-Reason:
+Conclusions:
 
-Holiday conditions are associated with sales variation.
+-   The histogram shows a unimodal, positively skewed distribution with
+    a long high-sales tail.
+-   The Tukey upper fence is 13,611.5.
+-   30,769 operating-day sales observations (3.64%) lie above that
+    fence.
+-   These observations are retained. They are statistical extremes, not
+    confirmed errors.
+-   A later model should consider a skewed target, for example a log
+    transform or a robust loss. Do not delete the tail by default.
 
----
+## 3.4 Completed: Temporal patterns
 
-## Store Characteristics
+Figures:
 
-Potential features:
+-   `outputs/figures/daily_average_sales_trend_ma7.png`
+-   `outputs/figures/weekday_sales_boxplot.png`
 
-- StoreType;
-- Assortment.
+Methods:
 
-Reason:
+-   Daily average sales per operating store, so changes in the number of
+    open stores are not mistaken for demand changes.
+-   A 7-day moving average (`window=7`, `min_periods=1`) was added to
+    separate short-term noise from the broader trend.
+-   Weekday boxplots compare distributions, not only means. Extreme
+    points are hidden (`showfliers=False`) so the boxes remain readable.
 
-Different store structures show different sales performance.
+Weekday operating-day Sales:
 
----
+| Weekday | Count  | Mean     | Median | IQR    |
+|---------|--------|----------|--------|--------|
+| Mon     | 137,560| 8,216.07 | 7,539  | 4,595  |
+| Tue     | 143,961| 7,088.11 | 6,502  | 3,561  |
+| Wed     | 141,936| 6,728.12 | 6,210  | 3,158  |
+| Thu     | 134,644| 6,767.31 | 6,246  | 3,087  |
+| Fri     | 138,640| 7,072.68 | 6,580  | 3,119  |
+| Sat     | 144,058| 5,874.84 | 5,425  | 3,307  |
+| Sun     | 3,593  | 8,224.72 | 6,876  | 8,104  |
 
-## Competition Features
+Conclusions:
 
-Potential feature:
+-   Monday is the strongest regular weekday.
+-   Saturday has the lowest typical sales among regularly open days.
+-   Sunday has very few operating observations and the largest IQR.
+-   Weekday distributions overlap substantially, so day of week is
+    useful but not sufficient.
+-   The train period is 2013-01-01 to 2015-07-31. The official test
+    period is 2015-08-01 to 2015-09-17. Modelling must use a time-aware
+    split, not a random split.
 
-- CompetitionDistance.
+## 3.5 Completed: Customers and sales
 
-Reason:
+Figure:
 
-External market environment may provide additional predictive information.
+-   `outputs/figures/customers_sales_scatter.png`
 
----
+Result:
 
-# 3.12 Overall Conclusion
+-   Pearson correlation on all operating days: **0.8236**.
+-   The scatter uses a reproducible sample of 30,000 points
+    (`random_state=42`) plus a degree-1 trend fitted on that sample.
+-   The correlation is strong and positive.
 
-The exploratory data analysis demonstrates that Rossmann sales variation is influenced by multiple factors:
+Modelling restriction:
 
-- customer traffic;
-- promotion activities;
-- temporal patterns;
-- holiday conditions;
-- store characteristics;
-- competition environment.
+`Customers` is available in `train.csv` but **not** in `test.csv`.
+Same-day customer count cannot be used as an inference feature. Using
+it would leak information that is unavailable at prediction time. It
+may still be studied as a mechanism, or used only through historical
+lags known before the forecast date.
 
-No single variable can fully explain daily sales variation.
+## 3.6 Completed: Promotion, holidays, and traffic
 
-Therefore, the following feature engineering stage should combine:
+Figures:
 
-- temporal information;
-- operational variables;
-- store-level characteristics;
-- external competition information;
+-   `outputs/figures/sales_promotion_boxplot.png`
+-   `outputs/figures/sales_stateholiday_boxplot.png`
+-   `outputs/figures/average_sales_stateholiday.png`
+-   `outputs/figures/sales_schoolholiday_boxplot.png`
+-   `outputs/figures/customers_promotion_boxplot.png`
 
-to construct comprehensive input features for the neural network prediction model.
+Operating-day comparison:
+
+| Condition | Sales mean | Sales median | Customers mean |
+|-----------|------------|--------------|----------------|
+| Promo = 0 | 5,929.41   | 5,459        | 696.86         |
+| Promo = 1 | 8,228.28   | 7,649        | 844.43         |
+| SchoolHoliday = 0 | 6,896.78 | 6,326   | — |
+| SchoolHoliday = 1 | 7,200.18 | 6,562   | — |
+
+State-holiday operating days are rare:
+
+-   No holiday: 843,482 observations, mean sales 6,953.52.
+-   Holiday A: 694 observations, mean 8,487.47.
+-   Holiday B: 145 observations, mean 9,887.89.
+-   Holiday C: 71 observations, mean 9,743.75.
+
+Conclusions:
+
+-   Promotion is a large, usable effect. It is present in the test set.
+-   Promotion raises both sales and customer traffic, so the sales lift
+    is not only a higher spend per existing customer.
+-   School holiday has a small positive difference and should be kept as
+    a feature, but it is weaker than Promo and weekday.
+-   Open stores on state holidays have higher average sales, but the
+    samples are tiny and selected: most holiday stores are closed.
+    Holiday effects must be modelled together with `Open`, not as a
+    simple additive boost estimated only from open holiday days.
+
+## 3.7 Completed: Store characteristics and competition
+
+Figures:
+
+-   `outputs/figures/average_sales_storetype.png`
+-   `outputs/figures/store_distribution_assortment.png`
+-   `outputs/figures/average_sales_assortment.png`
+-   `outputs/figures/competition_distance_distribution.png`
+-   `outputs/figures/competition_distance_sales_scatter.png`
+
+Store type, operating days, sorted by mean sales:
+
+| StoreType | Mean sales | Median | Stores | Observations |
+|-----------|------------|--------|--------|--------------|
+| b         | 10,231.41  | 9,130  | 17     | 15,563       |
+| c         | 6,932.51   | 6,407  | 148    | 112,978      |
+| a         | 6,925.17   | 6,285  | 602    | 457,077      |
+| d         | 6,822.14   | 6,395  | 348    | 258,774      |
+
+Assortment:
+
+| Assortment | Stores | Mean sales | Median |
+|------------|--------|------------|--------|
+| a          | 593    | 6,621.02   | 6,082  |
+| b          | 9      | 8,639.35   | 8,081  |
+| c          | 513    | 7,300.53   | 6,675  |
+
+Competition distance, non-missing operating days (842,206 rows):
+
+-   Median distance: 2,320.
+-   Mean distance: 5,457.98.
+-   Maximum: 75,860.
+-   Pearson correlation with Sales: **-0.0364**.
+
+Conclusions:
+
+-   StoreType `b` and Assortment `b` are high-performing but rare.
+    They should be encoded, not dropped, and should not be interpreted
+    from the mean alone.
+-   Types a, c, and d have similar average sales. Store identity or
+    other store attributes may matter more than StoreType among these
+    three.
+-   Competition distance is strongly right-skewed and almost linearly
+    uncorrelated with daily sales. Do not expect a linear distance term
+    to carry much signal. Bins, missing indicators, or competition-open
+    duration are more appropriate than a raw linear feature.
+-   Three stores still have missing distance. They must be handled
+    explicitly.
+
+## 3.8 EDA implications for the next stage
+
+Confirmed feature directions:
+
+1.  Do not predict closed-store sales as ordinary demand. If `Open` is
+    known, closed days can be set to zero. Test `Open` has 11 missing
+    values that need an explicit rule.
+2.  Time features: weekday, month, week of year, and a time-based
+    validation window. The forecast horizon is the six weeks after
+    2015-07-31.
+3.  Promo is a primary operational feature.
+4.  StateHoliday and SchoolHoliday should be retained, with care about
+    rare holiday categories and the open-store selection effect.
+5.  StoreType and Assortment should be categorical features.
+6.  Same-day Customers must not be used as a model input for the test
+    period.
+7.  Promo2 and competition-opening fields were preserved during cleaning
+    but were not yet explored in EDA. They belong in feature
+    engineering, not in another blind imputation step.
+8.  The target is right-skewed. Transform or evaluate accordingly.
+9.  IQR extremes remain in the data.
+
+Known implementation notes, not blocking conclusions:
+
+-   Section 5.1 markdown describes an unsmoothed figure named
+    `daily_average_sales_trend.png`. The saved figure is the moving-
+    average version `daily_average_sales_trend_ma7.png`.
+-   StoreType markdown mentions a store-count chart, but only the
+    average-sales bar chart was implemented.
+-   The competition histogram y-axis is labelled "Number of Stores",
+    while the plotted data are daily records.
+-   `sales_boxplot_open.png` uses the deprecated Matplotlib argument
+    `vert=False`.
 
 ------------------------------------------------------------------------
 
 # 4. Feature Engineering Progress
 
-(To be completed)
+Not started. `notebooks/04_features.ipynb` still contains only the
+planned scope comment.
+
+Planned scope from the notebook stub:
+
+-   Build the modelling table.
+-   Generate customer-history, promotion, holiday, time, and store
+    features.
+
+Decisions that must be made before coding, based on completed EDA:
+
+1.  Prediction grain. The official test set is daily, store-level,
+    2015-08-01 to 2015-09-17, 41,088 rows, 8 columns, no `Sales` and no
+    `Customers`. The notebook stub mentions monthly store data. Monthly
+    aggregation would not match the required submission grain. The
+    default next step should be a daily store-level feature table
+    unless the course requirement explicitly changes the target.
+2.  Same-day `Customers` is explanatory only. Allowed substitutes are
+    historical lags and historical store customer levels known before
+    the forecast date.
+3.  Missing Promo2 details stay structurally missing. Encode
+    "not applicable" rather than imputing a week or year.
+4.  Missing competition dates stay missing. Add missing indicators
+    instead of inventing dates.
+5.  Preserve the 54 open-store zero-sales review cases and the IQR
+    tail.
 
 ------------------------------------------------------------------------
 
 # 5. Model Development Progress
 
-(To be completed)
+Not started. `notebooks/05_model.ipynb` still contains only the planned
+scope comment.
+
+Planned scope:
+
+-   Data split
+-   Preprocessing
+-   Baseline
+-   Neural network training
+-   Evaluation and result analysis
+
+Constraints already fixed by the project state:
+
+-   Use a temporal split. Training ends on 2015-07-31. The test window
+    begins on 2015-08-01.
+-   `requirements.txt` currently lists pandas, numpy, matplotlib, and
+    scikit-learn. A neural-network library has not been added yet.
+-   A simple baseline should be built before the neural network, so
+    later neural-network gains can be interpreted.
+-   Evaluation must not use same-day `Customers` as an input feature.
