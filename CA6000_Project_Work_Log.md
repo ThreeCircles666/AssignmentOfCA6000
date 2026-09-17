@@ -626,3 +626,108 @@ Constraints already fixed by the project state:
 -   A simple baseline should be built before the neural network, so
     later neural-network gains can be interpreted.
 -   Evaluation must not use same-day `Customers` as an input feature.
+
+The notes above in this section are the historical plan. They are kept.
+The completed state is recorded in section 6.
+
+------------------------------------------------------------------------
+
+# 6. Final Stage Record (2026-09-17)
+
+This section is added after feature engineering, model evaluation, and
+file organisation. Earlier sections are not deleted.
+
+## 6.1 Feature engineering
+
+Completed in `notebooks/04_features.ipynb`.
+
+-   Prediction grain is daily and store-level, matching the official
+    test window.
+-   Same-day `Customers` is excluded from model inputs. Historical
+    customer lags and rolling features are retained.
+-   Rolling features are built on the combined Store–Date timeline and
+    then split back, so training and test columns match.
+-   Exports: `data/processed/train_feature_final.csv`
+    (1,017,209 × 40) and `data/processed/test_feature_final.csv`
+    (41,088 × 39).
+-   Random Forest interpretation, not the forecasting model: `Open`
+    importance 0.472434; `Sales_lag_14` 0.287071. Historical demand
+    accounts for 89.35% of grouped importance.
+-   Figures are in `outputs/figures/04_feature_engineering/`.
+
+## 6.2 Final model
+
+The retained estimator is the file
+`outputs/models/final_sales_model.pkl`. It was not retrained in this
+review, and the pickle was not overwritten.
+
+```text
+MLPRegressor
+hidden layers: 128 → 64 → 32
+activation: relu
+solver: adam
+learning_rate_init: 0.001
+max_iter: 50
+early_stopping: False
+random_state: 42
+n_features_in_: 49
+```
+
+`notebooks/05_model.ipynb` now records this architecture and loads the
+saved file for a consistency check. It does not call `fit()`.
+
+Exploration charts remain in `outputs/figures/05_model/`:
+
+-   baseline prediction and residual plots;
+-   baseline versus log-target error;
+-   architecture RMSE comparison;
+-   final model comparison, including an early-stopping variant.
+
+Those charts are not annotated with exact printed metrics in the
+notebook, so their bar heights are not copied into this log. The
+retained model is the saved 128 → 64 → 32 network. Selection is based
+on validation performance, printed in notebook 06.
+
+The companion preprocessor is `outputs/models/preprocessor.pkl`, fit on
+the training period only.
+
+## 6.3 Evaluation
+
+Evaluated in `notebooks/06_evaluation.ipynb` on the July 2015
+validation window (34,565 rows, 49 encoded features). Predictions for
+`Open = 0` are set to zero after inference.
+
+-   MAE: 491.243061
+-   RMSE: 731.555819
+-   R²: 0.958850
+-   Mean residual (actual − predicted): 27.449545
+-   Residual standard deviation: 731.040655
+-   Absolute error by sales level: Low 247.110986, Medium 481.630176,
+    High 745.055776
+
+Figures:
+
+-   `outputs/figures/06_evaluation/06_final_actual_vs_predicted.png`
+-   `outputs/figures/06_evaluation/06_final_residual_distribution.png`
+-   `outputs/figures/06_evaluation/06_error_analysis_by_sales_level.png`
+
+`notebooks/07_conclusion.ipynb` summarises only these measured results.
+
+## 6.4 File layout
+
+Figures are grouped by notebook:
+
+-   `outputs/figures/03_eda/`
+-   `outputs/figures/04_feature_engineering/`
+-   `outputs/figures/05_model/`
+-   `outputs/figures/06_evaluation/`
+
+Models are only in `outputs/models/`. Predictions are in
+`outputs/predictions/`.
+
+Git ignores, and should not upload:
+
+-   `data/raw/`
+-   `data/processed/`
+-   `outputs/models/`
+-   `outputs/predictions/`

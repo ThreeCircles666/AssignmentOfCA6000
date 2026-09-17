@@ -226,3 +226,4 @@ outputs/models/
 
 # Prediction files
 outputs/*.csv
+outputs/predictions/
